@@ -1,119 +1,88 @@
-import { type CreateMedicineInput, type UpdateMedicineInput, type Medicine, type SearchMedicinesInput, type CreateMedicineCategoryInput, type MedicineCategory } from '../schema';
+import { type CreateMedicineInput, type UpdateMedicineInput, type Medicine, type LowStockAlert } from '../schema';
 
-// Medicine management handlers
 export async function createMedicine(input: CreateMedicineInput): Promise<Medicine> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create a new medicine record in the database and track stock movement.
-    return Promise.resolve({
-        id: 1,
-        name: input.name,
-        brand: input.brand,
-        category_id: input.category_id,
-        generic_name: input.generic_name,
-        dosage: input.dosage,
-        unit: input.unit,
-        price_per_unit: input.price_per_unit,
-        stock_quantity: input.stock_quantity,
-        min_stock_level: input.min_stock_level,
-        expiry_date: input.expiry_date,
-        batch_number: input.batch_number,
-        manufacturer: input.manufacturer,
-        description: input.description,
-        requires_prescription: input.requires_prescription,
-        created_at: new Date(),
-        updated_at: new Date()
-    });
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is creating a new medicine record and persisting it in the database.
+  return Promise.resolve({
+    id: 0, // Placeholder ID
+    name: input.name,
+    description: input.description || null,
+    current_stock: input.current_stock,
+    price: input.price,
+    supplier_name: input.supplier_name || null,
+    batch_number: input.batch_number || null,
+    expiry_date: input.expiry_date || null,
+    storage_conditions: input.storage_conditions || null,
+    minimum_stock_level: input.minimum_stock_level,
+    created_at: new Date(),
+    updated_at: new Date()
+  } as Medicine);
+}
+
+export async function getMedicines(): Promise<Medicine[]> {
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is fetching all medicines from the database with pagination support.
+  return Promise.resolve([]);
+}
+
+export async function getMedicine(id: number): Promise<Medicine | null> {
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is fetching a specific medicine by ID from the database.
+  return Promise.resolve(null);
 }
 
 export async function updateMedicine(input: UpdateMedicineInput): Promise<Medicine> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to update an existing medicine record and track stock changes.
-    return Promise.resolve({
-        id: input.id,
-        name: input.name || 'Updated Medicine',
-        brand: input.brand || null,
-        category_id: input.category_id || 1,
-        generic_name: input.generic_name || null,
-        dosage: input.dosage || '10mg',
-        unit: input.unit || 'tablet',
-        price_per_unit: input.price_per_unit || 10.00,
-        stock_quantity: input.stock_quantity || 0,
-        min_stock_level: input.min_stock_level || 10,
-        expiry_date: input.expiry_date || new Date(),
-        batch_number: input.batch_number || null,
-        manufacturer: input.manufacturer || null,
-        description: input.description || null,
-        requires_prescription: input.requires_prescription || true,
-        created_at: new Date(),
-        updated_at: new Date()
-    });
-}
-
-export async function getMedicineById(id: number): Promise<Medicine | null> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch a specific medicine by ID with category information.
-    return Promise.resolve({
-        id,
-        name: 'Sample Medicine',
-        brand: 'Brand Name',
-        category_id: 1,
-        generic_name: 'Generic Name',
-        dosage: '10mg',
-        unit: 'tablet',
-        price_per_unit: 15.50,
-        stock_quantity: 100,
-        min_stock_level: 20,
-        expiry_date: new Date('2025-12-31'),
-        batch_number: 'BATCH001',
-        manufacturer: 'Pharma Corp',
-        description: 'Sample description',
-        requires_prescription: true,
-        created_at: new Date(),
-        updated_at: new Date()
-    });
-}
-
-export async function searchMedicines(input: SearchMedicinesInput): Promise<{ medicines: Medicine[], total: number }> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to search medicines with filters (search, category, low stock) and pagination.
-    return Promise.resolve({
-        medicines: [],
-        total: 0
-    });
-}
-
-export async function getLowStockMedicines(): Promise<Medicine[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch medicines where stock_quantity <= min_stock_level.
-    return Promise.resolve([]);
-}
-
-export async function getExpiringMedicines(days: number = 30): Promise<Medicine[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch medicines expiring within specified days.
-    return Promise.resolve([]);
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is updating medicine information and persisting changes to the database.
+  return Promise.resolve({
+    id: input.id,
+    name: 'Updated Medicine',
+    description: null,
+    current_stock: 100,
+    price: 10.50,
+    supplier_name: null,
+    batch_number: null,
+    expiry_date: null,
+    storage_conditions: null,
+    minimum_stock_level: 10,
+    created_at: new Date(),
+    updated_at: new Date()
+  } as Medicine);
 }
 
 export async function deleteMedicine(id: number): Promise<boolean> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to soft delete or remove a medicine record.
-    return Promise.resolve(true);
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is removing a medicine record from the database.
+  return Promise.resolve(true);
 }
 
-// Medicine category handlers
-export async function createMedicineCategory(input: CreateMedicineCategoryInput): Promise<MedicineCategory> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to create a new medicine category.
-    return Promise.resolve({
-        id: 1,
-        name: input.name,
-        description: input.description,
-        created_at: new Date()
-    });
+export async function searchMedicines(query: string): Promise<Medicine[]> {
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is searching medicines by name, batch number, or supplier.
+  return Promise.resolve([]);
 }
 
-export async function getMedicineCategories(): Promise<MedicineCategory[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to fetch all medicine categories.
-    return Promise.resolve([]);
+export async function getLowStockAlerts(): Promise<LowStockAlert[]> {
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is fetching medicines with stock levels below minimum threshold.
+  return Promise.resolve([]);
+}
+
+export async function updateMedicineStock(medicineId: number, newStock: number, reason: string, userId: number): Promise<Medicine> {
+  // This is a placeholder declaration! Real code should be implemented here.
+  // The goal of this handler is updating medicine stock levels and creating inventory transaction records.
+  return Promise.resolve({
+    id: medicineId,
+    name: 'Medicine Name',
+    description: null,
+    current_stock: newStock,
+    price: 10.50,
+    supplier_name: null,
+    batch_number: null,
+    expiry_date: null,
+    storage_conditions: null,
+    minimum_stock_level: 10,
+    created_at: new Date(),
+    updated_at: new Date()
+  } as Medicine);
 }

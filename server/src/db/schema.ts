@@ -1,11 +1,22 @@
-import { serial, text, pgTable, timestamp, numeric, integer, boolean, pgEnum, date } from 'drizzle-orm/pg-core';
+import { 
+  serial, 
+  text, 
+  pgTable, 
+  timestamp, 
+  numeric, 
+  integer, 
+  boolean,
+  date,
+  pgEnum
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Enums
-export const userRoleEnum = pgEnum('user_role', ['admin', 'doctor', 'cashier']);
+export const userRoleEnum = pgEnum('user_role', ['admin', 'doctor', 'cashier_receptionist']);
 export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
-export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'card', 'insurance']);
-export const movementTypeEnum = pgEnum('movement_type', ['in', 'out', 'adjustment']);
+export const prescriptionStatusEnum = pgEnum('prescription_status', ['pending', 'filled', 'partially_filled']);
+export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'card']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['addition', 'subtraction', 'adjustment']);
 
 // Users table
 export const usersTable = pgTable('users', {
@@ -13,12 +24,13 @@ export const usersTable = pgTable('users', {
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
   password_hash: text('password_hash').notNull(),
-  full_name: text('full_name').notNull(),
   role: userRoleEnum('role').notNull(),
+  first_name: text('first_name').notNull(),
+  last_name: text('last_name').notNull(),
   phone: text('phone'),
-  is_active: boolean('is_active').notNull().default(true),
+  is_active: boolean('is_active').default(true).notNull(),
   created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
 // Patients table
@@ -27,211 +39,197 @@ export const patientsTable = pgTable('patients', {
   first_name: text('first_name').notNull(),
   last_name: text('last_name').notNull(),
   date_of_birth: date('date_of_birth').notNull(),
+  gender: genderEnum('gender').notNull(),
   phone: text('phone').notNull(),
   email: text('email'),
-  address: text('address'),
-  gender: genderEnum('gender').notNull(),
-  emergency_contact: text('emergency_contact'),
-  medical_history: text('medical_history'),
+  address: text('address').notNull(),
+  emergency_contact_name: text('emergency_contact_name'),
+  emergency_contact_phone: text('emergency_contact_phone'),
   allergies: text('allergies'),
+  chronic_conditions: text('chronic_conditions'),
+  blood_type: text('blood_type'),
   created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull(),
-});
-
-// Medicine categories table
-export const medicineCategoriesTable = pgTable('medicine_categories', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  description: text('description'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
 // Medicines table
 export const medicinesTable = pgTable('medicines', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
-  brand: text('brand'),
-  category_id: integer('category_id').references(() => medicineCategoriesTable.id).notNull(),
-  generic_name: text('generic_name'),
-  dosage: text('dosage').notNull(),
-  unit: text('unit').notNull(),
-  price_per_unit: numeric('price_per_unit', { precision: 10, scale: 2 }).notNull(),
-  stock_quantity: integer('stock_quantity').notNull(),
-  min_stock_level: integer('min_stock_level').notNull(),
-  expiry_date: date('expiry_date').notNull(),
-  batch_number: text('batch_number'),
-  manufacturer: text('manufacturer'),
   description: text('description'),
-  requires_prescription: boolean('requires_prescription').notNull().default(true),
+  current_stock: integer('current_stock').notNull(),
+  price: numeric('price', { precision: 10, scale: 2 }).notNull(),
+  supplier_name: text('supplier_name'),
+  batch_number: text('batch_number'),
+  expiry_date: date('expiry_date'),
+  storage_conditions: text('storage_conditions'),
+  minimum_stock_level: integer('minimum_stock_level').notNull(),
   created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
+});
+
+// Visits table
+export const visitsTable = pgTable('visits', {
+  id: serial('id').primaryKey(),
+  patient_id: integer('patient_id').notNull(),
+  doctor_id: integer('doctor_id').notNull(),
+  visit_date: timestamp('visit_date').notNull(),
+  reason_for_visit: text('reason_for_visit').notNull(),
+  diagnosis: text('diagnosis'),
+  treatment_notes: text('treatment_notes'),
+  vital_signs: text('vital_signs'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
 // Prescriptions table
 export const prescriptionsTable = pgTable('prescriptions', {
   id: serial('id').primaryKey(),
-  patient_id: integer('patient_id').references(() => patientsTable.id).notNull(),
-  doctor_id: integer('doctor_id').references(() => usersTable.id).notNull(),
-  prescription_date: timestamp('prescription_date').defaultNow().notNull(),
-  diagnosis: text('diagnosis').notNull(),
-  symptoms: text('symptoms'),
-  notes: text('notes'),
-  is_filled: boolean('is_filled').notNull().default(false),
-  total_amount: numeric('total_amount', { precision: 10, scale: 2 }).notNull().default('0.00'),
+  visit_id: integer('visit_id').notNull(),
+  doctor_id: integer('doctor_id').notNull(),
+  patient_id: integer('patient_id').notNull(),
+  status: prescriptionStatusEnum('status').default('pending').notNull(),
+  total_amount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
   created_at: timestamp('created_at').defaultNow().notNull(),
-  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull()
 });
 
-// Prescription items table
+// Prescription Items table
 export const prescriptionItemsTable = pgTable('prescription_items', {
   id: serial('id').primaryKey(),
-  prescription_id: integer('prescription_id').references(() => prescriptionsTable.id).notNull(),
-  medicine_id: integer('medicine_id').references(() => medicinesTable.id).notNull(),
-  quantity: integer('quantity').notNull(),
+  prescription_id: integer('prescription_id').notNull(),
+  medicine_id: integer('medicine_id').notNull(),
+  quantity_prescribed: integer('quantity_prescribed').notNull(),
+  quantity_dispensed: integer('quantity_dispensed').default(0).notNull(),
   dosage_instructions: text('dosage_instructions').notNull(),
-  duration_days: integer('duration_days').notNull(),
   unit_price: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
   total_price: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
-  created_at: timestamp('created_at').defaultNow().notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull()
 });
 
-// Sales table
-export const salesTable = pgTable('sales', {
+// Payments table
+export const paymentsTable = pgTable('payments', {
   id: serial('id').primaryKey(),
-  cashier_id: integer('cashier_id').references(() => usersTable.id).notNull(),
-  patient_id: integer('patient_id').references(() => patientsTable.id),
-  prescription_id: integer('prescription_id').references(() => prescriptionsTable.id),
-  sale_date: timestamp('sale_date').defaultNow().notNull(),
-  total_amount: numeric('total_amount', { precision: 10, scale: 2 }).notNull(),
-  discount: numeric('discount', { precision: 10, scale: 2 }).notNull().default('0.00'),
-  tax_amount: numeric('tax_amount', { precision: 10, scale: 2 }).notNull().default('0.00'),
-  final_amount: numeric('final_amount', { precision: 10, scale: 2 }).notNull(),
+  prescription_id: integer('prescription_id'),
+  patient_id: integer('patient_id').notNull(),
+  amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
   payment_method: paymentMethodEnum('payment_method').notNull(),
+  transaction_reference: text('transaction_reference'),
   notes: text('notes'),
-  created_at: timestamp('created_at').defaultNow().notNull(),
+  processed_by_user_id: integer('processed_by_user_id').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull()
 });
 
-// Sale items table
-export const saleItemsTable = pgTable('sale_items', {
+// Inventory Transactions table
+export const inventoryTransactionsTable = pgTable('inventory_transactions', {
   id: serial('id').primaryKey(),
-  sale_id: integer('sale_id').references(() => salesTable.id).notNull(),
-  medicine_id: integer('medicine_id').references(() => medicinesTable.id).notNull(),
+  medicine_id: integer('medicine_id').notNull(),
+  transaction_type: transactionTypeEnum('transaction_type').notNull(),
   quantity: integer('quantity').notNull(),
-  unit_price: numeric('unit_price', { precision: 10, scale: 2 }).notNull(),
-  total_price: numeric('total_price', { precision: 10, scale: 2 }).notNull(),
-  created_at: timestamp('created_at').defaultNow().notNull(),
-});
-
-// Stock movements table
-export const stockMovementsTable = pgTable('stock_movements', {
-  id: serial('id').primaryKey(),
-  medicine_id: integer('medicine_id').references(() => medicinesTable.id).notNull(),
-  movement_type: movementTypeEnum('movement_type').notNull(),
-  quantity: integer('quantity').notNull(),
+  reason: text('reason').notNull(),
   reference_id: integer('reference_id'),
   reference_type: text('reference_type'),
-  reason: text('reason'),
-  performed_by: integer('performed_by').references(() => usersTable.id).notNull(),
-  created_at: timestamp('created_at').defaultNow().notNull(),
+  performed_by_user_id: integer('performed_by_user_id').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull()
 });
 
 // Relations
 export const usersRelations = relations(usersTable, ({ many }) => ({
-  prescriptions: many(prescriptionsTable),
-  sales: many(salesTable),
-  stockMovements: many(stockMovementsTable),
+  doctorVisits: many(visitsTable, { relationName: 'doctor_visits' }),
+  doctorPrescriptions: many(prescriptionsTable, { relationName: 'doctor_prescriptions' }),
+  processedPayments: many(paymentsTable, { relationName: 'processed_payments' }),
+  inventoryTransactions: many(inventoryTransactionsTable, { relationName: 'user_transactions' })
 }));
 
 export const patientsRelations = relations(patientsTable, ({ many }) => ({
+  visits: many(visitsTable),
   prescriptions: many(prescriptionsTable),
-  sales: many(salesTable),
+  payments: many(paymentsTable)
 }));
 
-export const medicineCategoriesRelations = relations(medicineCategoriesTable, ({ many }) => ({
-  medicines: many(medicinesTable),
-}));
-
-export const medicinesRelations = relations(medicinesTable, ({ one, many }) => ({
-  category: one(medicineCategoriesTable, {
-    fields: [medicinesTable.category_id],
-    references: [medicineCategoriesTable.id],
-  }),
+export const medicinesRelations = relations(medicinesTable, ({ many }) => ({
   prescriptionItems: many(prescriptionItemsTable),
-  saleItems: many(saleItemsTable),
-  stockMovements: many(stockMovementsTable),
+  inventoryTransactions: many(inventoryTransactionsTable)
+}));
+
+export const visitsRelations = relations(visitsTable, ({ one, many }) => ({
+  patient: one(patientsTable, {
+    fields: [visitsTable.patient_id],
+    references: [patientsTable.id]
+  }),
+  doctor: one(usersTable, {
+    fields: [visitsTable.doctor_id],
+    references: [usersTable.id],
+    relationName: 'doctor_visits'
+  }),
+  prescriptions: many(prescriptionsTable)
 }));
 
 export const prescriptionsRelations = relations(prescriptionsTable, ({ one, many }) => ({
+  visit: one(visitsTable, {
+    fields: [prescriptionsTable.visit_id],
+    references: [visitsTable.id]
+  }),
   patient: one(patientsTable, {
     fields: [prescriptionsTable.patient_id],
-    references: [patientsTable.id],
+    references: [patientsTable.id]
   }),
   doctor: one(usersTable, {
     fields: [prescriptionsTable.doctor_id],
     references: [usersTable.id],
+    relationName: 'doctor_prescriptions'
   }),
   items: many(prescriptionItemsTable),
-  sales: many(salesTable),
+  payments: many(paymentsTable)
 }));
 
 export const prescriptionItemsRelations = relations(prescriptionItemsTable, ({ one }) => ({
   prescription: one(prescriptionsTable, {
     fields: [prescriptionItemsTable.prescription_id],
-    references: [prescriptionsTable.id],
+    references: [prescriptionsTable.id]
   }),
   medicine: one(medicinesTable, {
     fields: [prescriptionItemsTable.medicine_id],
-    references: [medicinesTable.id],
-  }),
+    references: [medicinesTable.id]
+  })
 }));
 
-export const salesRelations = relations(salesTable, ({ one, many }) => ({
-  cashier: one(usersTable, {
-    fields: [salesTable.cashier_id],
-    references: [usersTable.id],
+export const paymentsRelations = relations(paymentsTable, ({ one }) => ({
+  prescription: one(prescriptionsTable, {
+    fields: [paymentsTable.prescription_id],
+    references: [prescriptionsTable.id]
   }),
   patient: one(patientsTable, {
-    fields: [salesTable.patient_id],
-    references: [patientsTable.id],
+    fields: [paymentsTable.patient_id],
+    references: [patientsTable.id]
   }),
-  prescription: one(prescriptionsTable, {
-    fields: [salesTable.prescription_id],
-    references: [prescriptionsTable.id],
-  }),
-  items: many(saleItemsTable),
-}));
-
-export const saleItemsRelations = relations(saleItemsTable, ({ one }) => ({
-  sale: one(salesTable, {
-    fields: [saleItemsTable.sale_id],
-    references: [salesTable.id],
-  }),
-  medicine: one(medicinesTable, {
-    fields: [saleItemsTable.medicine_id],
-    references: [medicinesTable.id],
-  }),
-}));
-
-export const stockMovementsRelations = relations(stockMovementsTable, ({ one }) => ({
-  medicine: one(medicinesTable, {
-    fields: [stockMovementsTable.medicine_id],
-    references: [medicinesTable.id],
-  }),
-  performer: one(usersTable, {
-    fields: [stockMovementsTable.performed_by],
+  processedBy: one(usersTable, {
+    fields: [paymentsTable.processed_by_user_id],
     references: [usersTable.id],
-  }),
+    relationName: 'processed_payments'
+  })
 }));
 
-// Export all tables for enabling relation queries
+export const inventoryTransactionsRelations = relations(inventoryTransactionsTable, ({ one }) => ({
+  medicine: one(medicinesTable, {
+    fields: [inventoryTransactionsTable.medicine_id],
+    references: [medicinesTable.id]
+  }),
+  performedBy: one(usersTable, {
+    fields: [inventoryTransactionsTable.performed_by_user_id],
+    references: [usersTable.id],
+    relationName: 'user_transactions'
+  })
+}));
+
+// Export all tables for proper query building
 export const tables = {
   users: usersTable,
   patients: patientsTable,
-  medicineCategories: medicineCategoriesTable,
   medicines: medicinesTable,
+  visits: visitsTable,
   prescriptions: prescriptionsTable,
   prescriptionItems: prescriptionItemsTable,
-  sales: salesTable,
-  saleItems: saleItemsTable,
-  stockMovements: stockMovementsTable,
+  payments: paymentsTable,
+  inventoryTransactions: inventoryTransactionsTable
 };

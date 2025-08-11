@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 // User roles enum
-export const userRoleEnum = z.enum(['admin', 'doctor', 'cashier']);
-export type UserRole = z.infer<typeof userRoleEnum>;
+export const userRoleSchema = z.enum(['admin', 'doctor', 'cashier_receptionist']);
+export type UserRole = z.infer<typeof userRoleSchema>;
 
 // User schema
 export const userSchema = z.object({
@@ -10,8 +10,9 @@ export const userSchema = z.object({
   username: z.string(),
   email: z.string().email(),
   password_hash: z.string(),
-  full_name: z.string(),
-  role: userRoleEnum,
+  role: userRoleSchema,
+  first_name: z.string(),
+  last_name: z.string(),
   phone: z.string().nullable(),
   is_active: z.boolean(),
   created_at: z.coerce.date(),
@@ -20,146 +21,15 @@ export const userSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 
-// Patient schema
-export const patientSchema = z.object({
-  id: z.number(),
-  first_name: z.string(),
-  last_name: z.string(),
-  date_of_birth: z.coerce.date(),
-  phone: z.string(),
-  email: z.string().email().nullable(),
-  address: z.string().nullable(),
-  gender: z.enum(['male', 'female', 'other']),
-  emergency_contact: z.string().nullable(),
-  medical_history: z.string().nullable(),
-  allergies: z.string().nullable(),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date()
-});
-
-export type Patient = z.infer<typeof patientSchema>;
-
-// Medicine category schema
-export const medicineCategorySchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  description: z.string().nullable(),
-  created_at: z.coerce.date()
-});
-
-export type MedicineCategory = z.infer<typeof medicineCategorySchema>;
-
-// Medicine schema
-export const medicineSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  brand: z.string().nullable(),
-  category_id: z.number(),
-  generic_name: z.string().nullable(),
-  dosage: z.string(),
-  unit: z.string(),
-  price_per_unit: z.number(),
-  stock_quantity: z.number().int(),
-  min_stock_level: z.number().int(),
-  expiry_date: z.coerce.date(),
-  batch_number: z.string().nullable(),
-  manufacturer: z.string().nullable(),
-  description: z.string().nullable(),
-  requires_prescription: z.boolean(),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date()
-});
-
-export type Medicine = z.infer<typeof medicineSchema>;
-
-// Prescription schema
-export const prescriptionSchema = z.object({
-  id: z.number(),
-  patient_id: z.number(),
-  doctor_id: z.number(),
-  prescription_date: z.coerce.date(),
-  diagnosis: z.string(),
-  symptoms: z.string().nullable(),
-  notes: z.string().nullable(),
-  is_filled: z.boolean(),
-  total_amount: z.number(),
-  created_at: z.coerce.date(),
-  updated_at: z.coerce.date()
-});
-
-export type Prescription = z.infer<typeof prescriptionSchema>;
-
-// Prescription item schema
-export const prescriptionItemSchema = z.object({
-  id: z.number(),
-  prescription_id: z.number(),
-  medicine_id: z.number(),
-  quantity: z.number().int(),
-  dosage_instructions: z.string(),
-  duration_days: z.number().int(),
-  unit_price: z.number(),
-  total_price: z.number(),
-  created_at: z.coerce.date()
-});
-
-export type PrescriptionItem = z.infer<typeof prescriptionItemSchema>;
-
-// Sale schema
-export const saleSchema = z.object({
-  id: z.number(),
-  cashier_id: z.number(),
-  patient_id: z.number().nullable(),
-  prescription_id: z.number().nullable(),
-  sale_date: z.coerce.date(),
-  total_amount: z.number(),
-  discount: z.number(),
-  tax_amount: z.number(),
-  final_amount: z.number(),
-  payment_method: z.enum(['cash', 'card', 'insurance']),
-  notes: z.string().nullable(),
-  created_at: z.coerce.date()
-});
-
-export type Sale = z.infer<typeof saleSchema>;
-
-// Sale item schema
-export const saleItemSchema = z.object({
-  id: z.number(),
-  sale_id: z.number(),
-  medicine_id: z.number(),
-  quantity: z.number().int(),
-  unit_price: z.number(),
-  total_price: z.number(),
-  created_at: z.coerce.date()
-});
-
-export type SaleItem = z.infer<typeof saleItemSchema>;
-
-// Stock movement schema
-export const stockMovementSchema = z.object({
-  id: z.number(),
-  medicine_id: z.number(),
-  movement_type: z.enum(['in', 'out', 'adjustment']),
-  quantity: z.number().int(),
-  reference_id: z.number().nullable(),
-  reference_type: z.string().nullable(),
-  reason: z.string().nullable(),
-  performed_by: z.number(),
-  created_at: z.coerce.date()
-});
-
-export type StockMovement = z.infer<typeof stockMovementSchema>;
-
-// Input schemas for creating records
-
 // User input schemas
 export const createUserInputSchema = z.object({
   username: z.string().min(3),
   email: z.string().email(),
-  password: z.string().min(8),
-  full_name: z.string(),
-  role: userRoleEnum,
-  phone: z.string().nullable()
+  password: z.string().min(6),
+  role: userRoleSchema,
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+  phone: z.string().nullable().optional()
 });
 
 export type CreateUserInput = z.infer<typeof createUserInputSchema>;
@@ -171,180 +41,277 @@ export const loginInputSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginInputSchema>;
 
-export const updateUserInputSchema = z.object({
+// Patient schema
+export const patientSchema = z.object({
   id: z.number(),
-  username: z.string().min(3).optional(),
-  email: z.string().email().optional(),
-  full_name: z.string().optional(),
-  phone: z.string().nullable().optional(),
-  is_active: z.boolean().optional()
-});
-
-export type UpdateUserInput = z.infer<typeof updateUserInputSchema>;
-
-// Patient input schemas
-export const createPatientInputSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   date_of_birth: z.coerce.date(),
+  gender: z.enum(['male', 'female', 'other']),
   phone: z.string(),
   email: z.string().email().nullable(),
-  address: z.string().nullable(),
+  address: z.string(),
+  emergency_contact_name: z.string().nullable(),
+  emergency_contact_phone: z.string().nullable(),
+  allergies: z.string().nullable(),
+  chronic_conditions: z.string().nullable(),
+  blood_type: z.string().nullable(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date()
+});
+
+export type Patient = z.infer<typeof patientSchema>;
+
+export const createPatientInputSchema = z.object({
+  first_name: z.string().min(1),
+  last_name: z.string().min(1),
+  date_of_birth: z.coerce.date(),
   gender: z.enum(['male', 'female', 'other']),
-  emergency_contact: z.string().nullable(),
-  medical_history: z.string().nullable(),
-  allergies: z.string().nullable()
+  phone: z.string().min(1),
+  email: z.string().email().nullable().optional(),
+  address: z.string().min(1),
+  emergency_contact_name: z.string().nullable().optional(),
+  emergency_contact_phone: z.string().nullable().optional(),
+  allergies: z.string().nullable().optional(),
+  chronic_conditions: z.string().nullable().optional(),
+  blood_type: z.string().nullable().optional()
 });
 
 export type CreatePatientInput = z.infer<typeof createPatientInputSchema>;
 
 export const updatePatientInputSchema = z.object({
   id: z.number(),
-  first_name: z.string().optional(),
-  last_name: z.string().optional(),
+  first_name: z.string().min(1).optional(),
+  last_name: z.string().min(1).optional(),
   date_of_birth: z.coerce.date().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().nullable().optional(),
-  address: z.string().nullable().optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
-  emergency_contact: z.string().nullable().optional(),
-  medical_history: z.string().nullable().optional(),
-  allergies: z.string().nullable().optional()
+  phone: z.string().min(1).optional(),
+  email: z.string().email().nullable().optional(),
+  address: z.string().min(1).optional(),
+  emergency_contact_name: z.string().nullable().optional(),
+  emergency_contact_phone: z.string().nullable().optional(),
+  allergies: z.string().nullable().optional(),
+  chronic_conditions: z.string().nullable().optional(),
+  blood_type: z.string().nullable().optional()
 });
 
 export type UpdatePatientInput = z.infer<typeof updatePatientInputSchema>;
 
-// Medicine category input schemas
-export const createMedicineCategoryInputSchema = z.object({
+// Medicine schema
+export const medicineSchema = z.object({
+  id: z.number(),
   name: z.string(),
-  description: z.string().nullable()
+  description: z.string().nullable(),
+  current_stock: z.number().int(),
+  price: z.number(),
+  supplier_name: z.string().nullable(),
+  batch_number: z.string().nullable(),
+  expiry_date: z.coerce.date().nullable(),
+  storage_conditions: z.string().nullable(),
+  minimum_stock_level: z.number().int(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date()
 });
 
-export type CreateMedicineCategoryInput = z.infer<typeof createMedicineCategoryInputSchema>;
+export type Medicine = z.infer<typeof medicineSchema>;
 
-// Medicine input schemas
 export const createMedicineInputSchema = z.object({
-  name: z.string(),
-  brand: z.string().nullable(),
-  category_id: z.number(),
-  generic_name: z.string().nullable(),
-  dosage: z.string(),
-  unit: z.string(),
-  price_per_unit: z.number().positive(),
-  stock_quantity: z.number().int().nonnegative(),
-  min_stock_level: z.number().int().nonnegative(),
-  expiry_date: z.coerce.date(),
-  batch_number: z.string().nullable(),
-  manufacturer: z.string().nullable(),
-  description: z.string().nullable(),
-  requires_prescription: z.boolean()
+  name: z.string().min(1),
+  description: z.string().nullable().optional(),
+  current_stock: z.number().int().nonnegative(),
+  price: z.number().positive(),
+  supplier_name: z.string().nullable().optional(),
+  batch_number: z.string().nullable().optional(),
+  expiry_date: z.coerce.date().nullable().optional(),
+  storage_conditions: z.string().nullable().optional(),
+  minimum_stock_level: z.number().int().nonnegative()
 });
 
 export type CreateMedicineInput = z.infer<typeof createMedicineInputSchema>;
 
 export const updateMedicineInputSchema = z.object({
   id: z.number(),
-  name: z.string().optional(),
-  brand: z.string().nullable().optional(),
-  category_id: z.number().optional(),
-  generic_name: z.string().nullable().optional(),
-  dosage: z.string().optional(),
-  unit: z.string().optional(),
-  price_per_unit: z.number().positive().optional(),
-  stock_quantity: z.number().int().nonnegative().optional(),
-  min_stock_level: z.number().int().nonnegative().optional(),
-  expiry_date: z.coerce.date().optional(),
-  batch_number: z.string().nullable().optional(),
-  manufacturer: z.string().nullable().optional(),
+  name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  requires_prescription: z.boolean().optional()
+  current_stock: z.number().int().nonnegative().optional(),
+  price: z.number().positive().optional(),
+  supplier_name: z.string().nullable().optional(),
+  batch_number: z.string().nullable().optional(),
+  expiry_date: z.coerce.date().nullable().optional(),
+  storage_conditions: z.string().nullable().optional(),
+  minimum_stock_level: z.number().int().nonnegative().optional()
 });
 
 export type UpdateMedicineInput = z.infer<typeof updateMedicineInputSchema>;
 
-// Prescription input schemas
-export const createPrescriptionInputSchema = z.object({
+// Visit schema
+export const visitSchema = z.object({
+  id: z.number(),
   patient_id: z.number(),
   doctor_id: z.number(),
-  diagnosis: z.string(),
-  symptoms: z.string().nullable(),
-  notes: z.string().nullable(),
-  items: z.array(z.object({
+  visit_date: z.coerce.date(),
+  reason_for_visit: z.string(),
+  diagnosis: z.string().nullable(),
+  treatment_notes: z.string().nullable(),
+  vital_signs: z.string().nullable(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date()
+});
+
+export type Visit = z.infer<typeof visitSchema>;
+
+export const createVisitInputSchema = z.object({
+  patient_id: z.number(),
+  doctor_id: z.number(),
+  visit_date: z.coerce.date(),
+  reason_for_visit: z.string().min(1),
+  diagnosis: z.string().nullable().optional(),
+  treatment_notes: z.string().nullable().optional(),
+  vital_signs: z.string().nullable().optional()
+});
+
+export type CreateVisitInput = z.infer<typeof createVisitInputSchema>;
+
+// Prescription schema
+export const prescriptionStatusSchema = z.enum(['pending', 'filled', 'partially_filled']);
+export type PrescriptionStatus = z.infer<typeof prescriptionStatusSchema>;
+
+export const prescriptionSchema = z.object({
+  id: z.number(),
+  visit_id: z.number(),
+  doctor_id: z.number(),
+  patient_id: z.number(),
+  status: prescriptionStatusSchema,
+  total_amount: z.number(),
+  created_at: z.coerce.date(),
+  updated_at: z.coerce.date()
+});
+
+export type Prescription = z.infer<typeof prescriptionSchema>;
+
+export const createPrescriptionInputSchema = z.object({
+  visit_id: z.number(),
+  doctor_id: z.number(),
+  patient_id: z.number(),
+  prescription_items: z.array(z.object({
     medicine_id: z.number(),
     quantity: z.number().int().positive(),
-    dosage_instructions: z.string(),
-    duration_days: z.number().int().positive()
+    dosage_instructions: z.string()
   }))
 });
 
 export type CreatePrescriptionInput = z.infer<typeof createPrescriptionInputSchema>;
 
-export const updatePrescriptionInputSchema = z.object({
+// Prescription Item schema
+export const prescriptionItemSchema = z.object({
   id: z.number(),
-  diagnosis: z.string().optional(),
-  symptoms: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
-  is_filled: z.boolean().optional()
+  prescription_id: z.number(),
+  medicine_id: z.number(),
+  quantity_prescribed: z.number().int(),
+  quantity_dispensed: z.number().int(),
+  dosage_instructions: z.string(),
+  unit_price: z.number(),
+  total_price: z.number(),
+  created_at: z.coerce.date()
 });
 
-export type UpdatePrescriptionInput = z.infer<typeof updatePrescriptionInputSchema>;
+export type PrescriptionItem = z.infer<typeof prescriptionItemSchema>;
 
-// Sale input schemas
-export const createSaleInputSchema = z.object({
-  cashier_id: z.number(),
-  patient_id: z.number().nullable(),
+// Payment schema
+export const paymentMethodSchema = z.enum(['cash', 'card']);
+export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
+
+export const paymentSchema = z.object({
+  id: z.number(),
   prescription_id: z.number().nullable(),
-  discount: z.number().nonnegative().default(0),
-  tax_amount: z.number().nonnegative().default(0),
-  payment_method: z.enum(['cash', 'card', 'insurance']),
+  patient_id: z.number(),
+  amount: z.number(),
+  payment_method: paymentMethodSchema,
+  transaction_reference: z.string().nullable(),
   notes: z.string().nullable(),
-  items: z.array(z.object({
-    medicine_id: z.number(),
-    quantity: z.number().int().positive()
+  processed_by_user_id: z.number(),
+  created_at: z.coerce.date()
+});
+
+export type Payment = z.infer<typeof paymentSchema>;
+
+export const createPaymentInputSchema = z.object({
+  prescription_id: z.number().nullable().optional(),
+  patient_id: z.number(),
+  amount: z.number().positive(),
+  payment_method: paymentMethodSchema,
+  transaction_reference: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  processed_by_user_id: z.number()
+});
+
+export type CreatePaymentInput = z.infer<typeof createPaymentInputSchema>;
+
+// Inventory Transaction schema
+export const transactionTypeSchema = z.enum(['addition', 'subtraction', 'adjustment']);
+export type TransactionType = z.infer<typeof transactionTypeSchema>;
+
+export const inventoryTransactionSchema = z.object({
+  id: z.number(),
+  medicine_id: z.number(),
+  transaction_type: transactionTypeSchema,
+  quantity: z.number().int(),
+  reason: z.string(),
+  reference_id: z.number().nullable(),
+  reference_type: z.string().nullable(),
+  performed_by_user_id: z.number(),
+  created_at: z.coerce.date()
+});
+
+export type InventoryTransaction = z.infer<typeof inventoryTransactionSchema>;
+
+// Report input schemas
+export const salesReportInputSchema = z.object({
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date()
+});
+
+export type SalesReportInput = z.infer<typeof salesReportInputSchema>;
+
+export const medicineUsageReportInputSchema = z.object({
+  start_date: z.coerce.date(),
+  end_date: z.coerce.date(),
+  medicine_id: z.number().optional()
+});
+
+export type MedicineUsageReportInput = z.infer<typeof medicineUsageReportInputSchema>;
+
+// Response schemas for reports
+export const salesReportSchema = z.object({
+  total_sales: z.number(),
+  total_transactions: z.number(),
+  daily_breakdown: z.array(z.object({
+    date: z.string(),
+    sales: z.number(),
+    transactions: z.number()
   }))
 });
 
-export type CreateSaleInput = z.infer<typeof createSaleInputSchema>;
+export type SalesReport = z.infer<typeof salesReportSchema>;
 
-// Stock movement input schema
-export const createStockMovementInputSchema = z.object({
+export const medicineUsageReportSchema = z.object({
+  medicine_name: z.string(),
+  total_dispensed: z.number(),
+  current_stock: z.number(),
+  usage_breakdown: z.array(z.object({
+    date: z.string(),
+    quantity_dispensed: z.number()
+  }))
+});
+
+export type MedicineUsageReport = z.infer<typeof medicineUsageReportSchema>;
+
+export const lowStockAlertSchema = z.object({
   medicine_id: z.number(),
-  movement_type: z.enum(['in', 'out', 'adjustment']),
-  quantity: z.number().int(),
-  reference_id: z.number().nullable(),
-  reference_type: z.string().nullable(),
-  reason: z.string().nullable(),
-  performed_by: z.number()
+  medicine_name: z.string(),
+  current_stock: z.number(),
+  minimum_stock_level: z.number(),
+  shortage: z.number()
 });
 
-export type CreateStockMovementInput = z.infer<typeof createStockMovementInputSchema>;
-
-// Query schemas
-export const paginationInputSchema = z.object({
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(10)
-});
-
-export type PaginationInput = z.infer<typeof paginationInputSchema>;
-
-export const searchPatientsInputSchema = paginationInputSchema.extend({
-  search: z.string().optional()
-});
-
-export type SearchPatientsInput = z.infer<typeof searchPatientsInputSchema>;
-
-export const searchMedicinesInputSchema = paginationInputSchema.extend({
-  search: z.string().optional(),
-  category_id: z.number().optional(),
-  low_stock: z.boolean().optional()
-});
-
-export type SearchMedicinesInput = z.infer<typeof searchMedicinesInputSchema>;
-
-export const reportInputSchema = z.object({
-  start_date: z.coerce.date(),
-  end_date: z.coerce.date(),
-  type: z.enum(['sales', 'medicine_usage', 'stock_movement'])
-});
-
-export type ReportInput = z.infer<typeof reportInputSchema>;
+export type LowStockAlert = z.infer<typeof lowStockAlertSchema>;
