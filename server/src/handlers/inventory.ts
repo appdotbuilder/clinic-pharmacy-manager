@@ -1,4 +1,7 @@
+import { db } from '../db';
+import { inventoryTransactionsTable, medicinesTable, usersTable } from '../db/schema';
 import { type InventoryTransaction, type TransactionType } from '../schema';
+import { eq, and, gte, lte, SQL } from 'drizzle-orm';
 
 export async function createInventoryTransaction(
   medicineId: number,
@@ -9,40 +12,127 @@ export async function createInventoryTransaction(
   referenceId?: number,
   referenceType?: string
 ): Promise<InventoryTransaction> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating inventory transaction record and updating medicine stock levels.
-  return Promise.resolve({
-    id: 0, // Placeholder ID
-    medicine_id: medicineId,
-    transaction_type: transactionType,
-    quantity: quantity,
-    reason: reason,
-    reference_id: referenceId || null,
-    reference_type: referenceType || null,
-    performed_by_user_id: userId,
-    created_at: new Date()
-  } as InventoryTransaction);
+  try {
+    // Verify medicine exists
+    const medicine = await db.select()
+      .from(medicinesTable)
+      .where(eq(medicinesTable.id, medicineId))
+      .execute();
+
+    if (medicine.length === 0) {
+      throw new Error(`Medicine with id ${medicineId} not found`);
+    }
+
+    // Verify user exists
+    const user = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .execute();
+
+    if (user.length === 0) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+
+    // Create transaction record
+    const result = await db.insert(inventoryTransactionsTable)
+      .values({
+        medicine_id: medicineId,
+        transaction_type: transactionType,
+        quantity: quantity,
+        reason: reason,
+        reference_id: referenceId || null,
+        reference_type: referenceType || null,
+        performed_by_user_id: userId
+      })
+      .returning()
+      .execute();
+
+    // Update medicine stock based on transaction type
+    const currentMedicine = medicine[0];
+    const currentStock = currentMedicine.current_stock;
+    
+    let newStock: number;
+    if (transactionType === 'addition') {
+      newStock = currentStock + quantity;
+    } else if (transactionType === 'subtraction') {
+      newStock = Math.max(0, currentStock - quantity); // Don't allow negative stock
+    } else { // adjustment
+      newStock = quantity; // For adjustments, quantity is the new stock level
+    }
+
+    await db.update(medicinesTable)
+      .set({ current_stock: newStock })
+      .where(eq(medicinesTable.id, medicineId))
+      .execute();
+
+    return {
+      ...result[0],
+      // Adjust quantity for adjustment type to reflect actual change
+      quantity: transactionType === 'adjustment' ? (newStock - currentStock) : quantity
+    };
+  } catch (error) {
+    console.error('Inventory transaction creation failed:', error);
+    throw error;
+  }
 }
 
 export async function getInventoryTransactions(): Promise<InventoryTransaction[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all inventory transactions with related medicine and user information.
-  return Promise.resolve([]);
+  try {
+    const result = await db.select()
+      .from(inventoryTransactionsTable)
+      .execute();
+
+    return result;
+  } catch (error) {
+    console.error('Failed to fetch inventory transactions:', error);
+    throw error;
+  }
 }
 
 export async function getInventoryTransactionsByMedicine(medicineId: number): Promise<InventoryTransaction[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all inventory transactions for a specific medicine.
-  return Promise.resolve([]);
+  try {
+    // Verify medicine exists
+    const medicine = await db.select()
+      .from(medicinesTable)
+      .where(eq(medicinesTable.id, medicineId))
+      .execute();
+
+    if (medicine.length === 0) {
+      throw new Error(`Medicine with id ${medicineId} not found`);
+    }
+
+    const result = await db.select()
+      .from(inventoryTransactionsTable)
+      .where(eq(inventoryTransactionsTable.medicine_id, medicineId))
+      .execute();
+
+    return result;
+  } catch (error) {
+    console.error('Failed to fetch inventory transactions by medicine:', error);
+    throw error;
+  }
 }
 
 export async function getInventoryTransactionsByDateRange(
   startDate: Date, 
   endDate: Date
 ): Promise<InventoryTransaction[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching inventory transactions within a specific date range.
-  return Promise.resolve([]);
+  try {
+    const result = await db.select()
+      .from(inventoryTransactionsTable)
+      .where(
+        and(
+          gte(inventoryTransactionsTable.created_at, startDate),
+          lte(inventoryTransactionsTable.created_at, endDate)
+        )
+      )
+      .execute();
+
+    return result;
+  } catch (error) {
+    console.error('Failed to fetch inventory transactions by date range:', error);
+    throw error;
+  }
 }
 
 export async function adjustMedicineStock(
@@ -51,19 +141,25 @@ export async function adjustMedicineStock(
   reason: string, 
   userId: number
 ): Promise<InventoryTransaction> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is performing stock adjustment and creating corresponding transaction record.
-  return Promise.resolve({
-    id: 0,
-    medicine_id: medicineId,
-    transaction_type: 'adjustment' as const,
-    quantity: 0, // Will be calculated as difference
-    reason: reason,
-    reference_id: null,
-    reference_type: 'stock_adjustment',
-    performed_by_user_id: userId,
-    created_at: new Date()
-  } as InventoryTransaction);
+  try {
+    if (newStockLevel < 0) {
+      throw new Error('Stock level cannot be negative');
+    }
+
+    // Use createInventoryTransaction with adjustment type
+    return await createInventoryTransaction(
+      medicineId,
+      'adjustment',
+      newStockLevel, // For adjustments, quantity represents the new stock level
+      reason,
+      userId,
+      undefined,
+      'stock_adjustment'
+    );
+  } catch (error) {
+    console.error('Stock adjustment failed:', error);
+    throw error;
+  }
 }
 
 export async function bulkUpdateStock(updates: Array<{
@@ -72,7 +168,34 @@ export async function bulkUpdateStock(updates: Array<{
   transaction_type: TransactionType;
   reason: string;
 }>, userId: number): Promise<InventoryTransaction[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is performing bulk stock updates and creating multiple transaction records.
-  return Promise.resolve([]);
+  try {
+    // Verify user exists
+    const user = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .execute();
+
+    if (user.length === 0) {
+      throw new Error(`User with id ${userId} not found`);
+    }
+
+    const transactions: InventoryTransaction[] = [];
+
+    // Process each update sequentially to maintain stock consistency
+    for (const update of updates) {
+      const transaction = await createInventoryTransaction(
+        update.medicine_id,
+        update.transaction_type,
+        update.quantity,
+        update.reason,
+        userId
+      );
+      transactions.push(transaction);
+    }
+
+    return transactions;
+  } catch (error) {
+    console.error('Bulk stock update failed:', error);
+    throw error;
+  }
 }

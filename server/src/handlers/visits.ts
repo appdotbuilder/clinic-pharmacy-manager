@@ -1,59 +1,178 @@
+import { db } from '../db';
+import { visitsTable, patientsTable, usersTable } from '../db/schema';
 import { type CreateVisitInput, type Visit } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function createVisit(input: CreateVisitInput): Promise<Visit> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new patient visit record and persisting it in the database.
-  return Promise.resolve({
-    id: 0, // Placeholder ID
-    patient_id: input.patient_id,
-    doctor_id: input.doctor_id,
-    visit_date: input.visit_date,
-    reason_for_visit: input.reason_for_visit,
-    diagnosis: input.diagnosis || null,
-    treatment_notes: input.treatment_notes || null,
-    vital_signs: input.vital_signs || null,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as Visit);
+  try {
+    // Verify that patient exists
+    const patient = await db.select()
+      .from(patientsTable)
+      .where(eq(patientsTable.id, input.patient_id))
+      .execute();
+    
+    if (patient.length === 0) {
+      throw new Error(`Patient with ID ${input.patient_id} not found`);
+    }
+
+    // Verify that doctor exists and has the correct role
+    const doctor = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, input.doctor_id))
+      .execute();
+    
+    if (doctor.length === 0 || doctor[0].role !== 'doctor') {
+      throw new Error(`Doctor with ID ${input.doctor_id} not found`);
+    }
+
+    // Insert visit record
+    const result = await db.insert(visitsTable)
+      .values({
+        patient_id: input.patient_id,
+        doctor_id: input.doctor_id,
+        visit_date: input.visit_date,
+        reason_for_visit: input.reason_for_visit,
+        diagnosis: input.diagnosis ?? null,
+        treatment_notes: input.treatment_notes ?? null,
+        vital_signs: input.vital_signs ?? null
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Visit creation failed:', error);
+    throw error;
+  }
 }
 
 export async function getVisits(): Promise<Visit[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all visits from the database with related patient and doctor information.
-  return Promise.resolve([]);
+  try {
+    const results = await db.select()
+      .from(visitsTable)
+      .orderBy(desc(visitsTable.visit_date))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch visits:', error);
+    throw error;
+  }
 }
 
 export async function getVisit(id: number): Promise<Visit | null> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching a specific visit by ID with related data from the database.
-  return Promise.resolve(null);
+  try {
+    const results = await db.select()
+      .from(visitsTable)
+      .where(eq(visitsTable.id, id))
+      .execute();
+
+    return results.length > 0 ? results[0] : null;
+  } catch (error) {
+    console.error('Failed to fetch visit:', error);
+    throw error;
+  }
 }
 
 export async function getPatientVisits(patientId: number): Promise<Visit[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all visits for a specific patient ordered by visit date.
-  return Promise.resolve([]);
+  try {
+    // Verify patient exists
+    const patient = await db.select()
+      .from(patientsTable)
+      .where(eq(patientsTable.id, patientId))
+      .execute();
+    
+    if (patient.length === 0) {
+      throw new Error(`Patient with ID ${patientId} not found`);
+    }
+
+    const results = await db.select()
+      .from(visitsTable)
+      .where(eq(visitsTable.patient_id, patientId))
+      .orderBy(desc(visitsTable.visit_date))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch patient visits:', error);
+    throw error;
+  }
 }
 
 export async function getDoctorVisits(doctorId: number): Promise<Visit[]> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is fetching all visits for a specific doctor ordered by visit date.
-  return Promise.resolve([]);
+  try {
+    // Verify doctor exists and has correct role
+    const doctor = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, doctorId))
+      .execute();
+    
+    if (doctor.length === 0 || doctor[0].role !== 'doctor') {
+      throw new Error(`Doctor with ID ${doctorId} not found`);
+    }
+
+    const results = await db.select()
+      .from(visitsTable)
+      .where(eq(visitsTable.doctor_id, doctorId))
+      .orderBy(desc(visitsTable.visit_date))
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to fetch doctor visits:', error);
+    throw error;
+  }
 }
 
 export async function updateVisit(id: number, input: Partial<CreateVisitInput>): Promise<Visit> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is updating visit information and persisting changes to the database.
-  return Promise.resolve({
-    id: id,
-    patient_id: 1,
-    doctor_id: 1,
-    visit_date: new Date(),
-    reason_for_visit: 'Updated reason',
-    diagnosis: null,
-    treatment_notes: null,
-    vital_signs: null,
-    created_at: new Date(),
-    updated_at: new Date()
-  } as Visit);
+  try {
+    // Check if visit exists
+    const existingVisit = await db.select()
+      .from(visitsTable)
+      .where(eq(visitsTable.id, id))
+      .execute();
+
+    if (existingVisit.length === 0) {
+      throw new Error(`Visit with ID ${id} not found`);
+    }
+
+    // If patient_id is being updated, verify it exists
+    if (input.patient_id !== undefined) {
+      const patient = await db.select()
+        .from(patientsTable)
+        .where(eq(patientsTable.id, input.patient_id))
+        .execute();
+      
+      if (patient.length === 0) {
+        throw new Error(`Patient with ID ${input.patient_id} not found`);
+      }
+    }
+
+    // If doctor_id is being updated, verify it exists and has correct role
+    if (input.doctor_id !== undefined) {
+      const doctor = await db.select()
+        .from(usersTable)
+        .where(eq(usersTable.id, input.doctor_id))
+        .execute();
+      
+      if (doctor.length === 0 || doctor[0].role !== 'doctor') {
+        throw new Error(`Doctor with ID ${input.doctor_id} not found`);
+      }
+    }
+
+    // Update visit record
+    const result = await db.update(visitsTable)
+      .set({
+        ...input,
+        updated_at: new Date()
+      })
+      .where(eq(visitsTable.id, id))
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Visit update failed:', error);
+    throw error;
+  }
 }
